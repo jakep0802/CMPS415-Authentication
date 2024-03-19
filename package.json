@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Authentication Assignment for CMPS415",
   "main": "home.js",
-  "repository": "git+https://github.com/jakep0802/CMPS415-Authentication.git",
+  "repository": "https://github.com/jakep0802/CMPS415-Authentication",
   "author": "",
   "license": "MIT",
   "scripts": {
