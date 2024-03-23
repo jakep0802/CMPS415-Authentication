@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <h1>Login</h1>
+        <form action="/api/loginUser/" method="post">
+            <label>Username:<br></label>
+            <input type="text" id="login_user" name="login_user" /><br>
+            <label>Password:<br></label>
+            <input type="password" id="login_pass" name="login_pass" /><br><br>
+            <input type="submit" value="Login"/>
+        </form>
+        <br>
+        <hr/>
+        <h1>Register</h1>
+        <form action="/api/registerUser/" method="post">
+            <label>Username:<br></label>
+            <input type="text" id="reg_user" name="reg_user" /><br>
+            <label>Password:<br></label>
+            <input type="password" id="reg_pass" name="reg_pass" /><br><br>
+            <input type="submit" value="Register"/>
+        </form>
+    </body>
+</html>

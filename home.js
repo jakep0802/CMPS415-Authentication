@@ -4,6 +4,7 @@ const uri = 'mongodb+srv://testUser:myCMPS415mongoDB@cmps415.7vwmz8w.mongodb.net
 
 const cookieParser = require('cookie-parser');
 const express = require('express');
+const fs = require('fs');
 const app = express();
 const port = 3000;
 
@@ -13,39 +14,31 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.get('/', (req, res) => {
+app.get('/', (req, res, next) => {
   myCookies = req.cookies;
-  cookieCount = countCookies(myCookies);
+  var authCookie = JSON.stringify(myCookies).search('"authenticated":"true"')
 
-  if(cookieCount == 0) {
-    output = 'Not authenticated'
+  if(authCookie != -1) {
+    output = 'Hi! | You\'re login cookies: ' + JSON.stringify(myCookies);
+    next();
   } else {
-    output = 'Authentication cookie exists: ' + JSON.stringify(myCookies);
+    fs.readFile('index.html', 'utf-8', (err, data) => {
+      if(err) {
+        output = err;
+        console.log(err);
+      }
+      output = data + '<br>';
+      next();
+   });
   }
-
-  res.send(output);
 });
 
-function countCookies(cookies) {
-  let count = 0;
-  for(key in cookies) {
-    count++;
-  }
-  return count;
-}
-
-app.get('/set/cookie/:name', (req, res) => {
-  res.cookie(req.params.name, 'Cookie', { maxAge: 20000 });
-  output = 'Cookie set';
-  res.send(output);
-});
-
-app.get('/api/registerUser/:username&:password', (req, res) => {
+app.post('/api/registerUser/', (req, res, next) => {
   const client = new MongoClient(uri);
 
   const account = {
-    user_ID: req.params.username,
-    password: req.params.password
+    user_ID: req.body.reg_user,
+    password: req.body.reg_pass
   };
 
   async function run() {
@@ -55,7 +48,7 @@ app.get('/api/registerUser/:username&:password', (req, res) => {
 
       await collection.insertOne(account);
       output = 'Account created!';
-      res.send(output);
+      next();
     } finally {
       await client.close();
     }
@@ -63,7 +56,7 @@ app.get('/api/registerUser/:username&:password', (req, res) => {
   run().catch(console.dir);
 });
 
-app.get('/api/loginUser/:username&:password', (req, res) => {
+app.post('/api/loginUser/', (req, res, next) => {
   const client = new MongoClient(uri);
   
   async function run() {
@@ -72,13 +65,23 @@ app.get('/api/loginUser/:username&:password', (req, res) => {
       const collection = database.collection('Authentication-Assignment');
 
       const query = {
-        user_ID: req.params.username,
-        password: req.params.password
+        user_ID: req.body.login_user,
+        password: req.body.login_pass
       }
 
       const account = await collection.findOne(query);
-      output = 'Account found: ' + account.user_ID;
-      res.send(output);
+
+      if(account == null) {
+        output = 'Unsuccessful login!';
+        next();
+      } else {
+        res.cookie('authenticated', 'true', {maxAge: 60000});
+        res.cookie('username', account.user_ID, { maxAge: 60000 });
+        myCookies = req.cookies;
+  
+        output = 'Hi, ' + account.user_ID + '! You are now logged in :)';
+        next();
+      }
     } finally {
       await client.close()
     }
@@ -86,35 +89,28 @@ app.get('/api/loginUser/:username&:password', (req, res) => {
   run().catch(console.dir);
 });
 
-app.get('/api/insert/:key&:val', (req, res) => {
-  console.log('Key: ' + req.params.key);
-  console.log('Value: ' + req.params.val);
-
-  const client = new MongoClient(uri);
-
-  const testDoc = {
-    name: 'Test',
-    Description: 'This is a test.'
-  };
-
-  testDoc[req.params.key] = req.params.val;
-
-  console.log('Inserting: ' + testDoc);
-
-  async function run() {
-    try {
-      const database = client.db('CMPS415-Database');
-      const parts = database.collection('Authentication-Assignment');
-
-      const execute = await parts.insertOne(testDoc);
-      console.log(execute);
-      res.send('Entered data: ' + JSON.stringify(testDoc));
-    } finally {
-      await client.close();
-    }
-  }
-  run().catch(console.dir);
+app.get('/showAllCookies', (req, res, next) => {
+  myCookies = req.cookies;
+  output = 'Active cookies: ' + JSON.stringify(myCookies);
+  next();
 });
+
+app.get('/clearCookies', (req, res, next) => {
+  res.clearCookie('authenticated');
+  res.clearCookie('username');
+  output = 'Cleared all cookies!';
+  next();
+});
+
+const footer = (req, res, next) => {
+  output += '<hr>';
+  output += '<a href="/">Home Page</a><br>';
+  output += '<a href="/showAllCookies">View All Cookies</a><br>';
+  output += '<a href="/clearCookies">Clear All Cookies</a><br>';
+  res.send(output);
+};
+
+app.use(footer);
 
 app.listen(port);
 console.log('Server started at http://localhost:' + port);
